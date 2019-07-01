@@ -5,15 +5,12 @@ const json = require('koa-json')
 const onerror = require('koa-onerror')
 const bodyparser = require('koa-bodyparser')
 const logger = require('koa-logger')
-var cors = require('koa-cors');
+const cors = require('koa-cors');
 
-const proxy = require('koa-proxies')
-const httpsProxyAgent = require('https-proxy-agent')
+const proxy = require('koa-proxy')
 
 const index = require('./routes/index')
 const users = require('./routes/users')
-
-const PROXY_PATH = 'http://test.admin.apsaras.teddymobile.net'
 
 // error handler
 onerror(app)
@@ -21,7 +18,7 @@ onerror(app)
 // middlewares
 app.use(cors())
 app.use(bodyparser({
-  enableTypes:['json', 'form', 'text']
+  enableTypes: ['json', 'form', 'text']
 }))
 app.use(json())
 app.use(logger())
@@ -40,13 +37,76 @@ app.use(async (ctx, next) => {
   console.log(`${ctx.method} ${ctx.url} - ${ms}ms`)
 })
 
-// proxy
-app.use(proxy('/api', {
-  target: PROXY_PATH,
-  changeOrigin: true,
-  agent: new httpsProxyAgent(PROXY_PATH),
-  logs: true
-}))
+const urlList = {
+  '/api/shop': {
+    target: 'http://192.168.4.75:8080',
+    changeOrigin: true,
+    pathRewrite: {
+      '^/api/shop': '/api/shop'
+    }
+  },
+  '/shop': {
+    target: 'http://47.94.151.150:8080',
+    changeOrigin: true,
+    pathRewrite: {
+      '^/shop': '/shop'
+    }
+  },
+  '/msg': {
+    target: 'http://47.94.151.150:8080',
+    changeOrigin: true,
+    pathRewrite: {
+      '^/msg': '/msg'
+    }
+  },
+  '/jump': {
+    target: 'http://47.94.151.150:8080',
+    changeOrigin: true,
+    pathRewrite: {
+      '^/jump': '/jump'
+    }
+  },
+  '/api/taskRecord': {
+    target: 'http://192.168.4.75:8080',
+    changeOrigin: true,
+    pathRewrite: {
+      '^/api/taskRecord': '/api/taskRecord'
+    }
+  },
+  '/api/number': {
+    target: 'http://192.168.4.75:8080',
+    changeOrigin: true,
+    pathRewrite: {
+      '^/api/number': '/api/number'
+    }
+  },
+  '/api/content': {
+    target: 'http://192.168.0.76:8080',
+    changeOrigin: true,
+    pathRewrite: {
+      '^/api/content': '/api/content'
+    }
+  },
+  '/api/sys': {
+    target: 'http://192.168.0.76:8080',
+    changeOrigin: true,
+    pathRewrite: {
+      '^/api/sys': '/api/sys'
+    }
+  },
+  '/api': {
+    target: 'http://192.168.0.76:8080',
+    changeOrigin: true
+  }
+}
+Object.keys(urlList).forEach(path => {
+  app.use(proxy({
+    host: urlList[path].target,
+    match: new RegExp('^' + path),
+    jar: true
+  }))
+})
+
 
 // routes
 app.use(index.routes(), index.allowedMethods())
